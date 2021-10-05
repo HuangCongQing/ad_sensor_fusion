@@ -157,8 +157,14 @@ include_directories(
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
-# 这里修改为自己的opencv路径
-set(OpenCV_DIR "/disk3/sensor_fusion/3rdparty/share/OpenCV")  
+# 这里修改为自己的opencv路径open3.x    opencv: /usr/include/opencv /usr/share/opencv
+# fatal error: opencv2/xfeatures2d/nonfree.hpp: 没有那个文件或目录
+# set(OpenCV_DIR "/disk3/sensor_fusion/3rdparty/share/OpenCV")   // /media/hcq/hcq4T/多传感器融合资料/07 多相机间的同步实战/opencv/3rdparty/share/OpenCV
+set(OpenCV_DIR "/media/hcq/hcq4T/多传感器融合资料/07多相机间的同步实战/opencv/3rdparty/share/OpenCV")
+# set(OpenCV_DIR "/home/hcq/snap/opencv/3rdparty/share/OpenCV") # 从硬盘复制出来，和上一行一样
+# set(OpenCV_DIR "/home/hcq/下载/opencv-3.4.10")
+
+
 find_package(OpenCV REQUIRED)
 
 message(STATUS "    libraries: ${OpenCV_LIBS}")

@@ -1,3 +1,12 @@
+/*
+ * @Description: 
+ * @Author: HCQ
+ * @Company(School): UCAS
+ * @Email: 1756260160@qq.com
+ * @Date: 2021-09-21 14:57:27
+ * @LastEditTime: 2021-10-01 12:37:50
+ * @FilePath: /ad_sensor_fusion/src/camera_camera_sync/include/camera_camera_sync/camera_camera_sync.hpp
+ */
 #ifndef _CAMERA_CAMERA_SYNC_HPP_
 #define _CAMERA_CAMERA_SYNC_HPP_
 
@@ -5,7 +14,7 @@
 #include <iostream>
 #include <vector>
 #include <opencv2/opencv.hpp>
-#include <opencv2/xfeatures2d/nonfree.hpp>
+#include <opencv2/xfeatures2d/nonfree.hpp>  // 报错 fatal error: opencv2/xfeatures2d/nonfree.hpp: 没有那个文件或目录
 #include <time.h>
 
 #define PRINTLOG std::cout << __LINE__ << " in " << __FILE__ << std::endl;

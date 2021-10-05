@@ -7,7 +7,7 @@
 #include <algorithm>
 
 using namespace std;
-
+// 得到图像
 void CameraCameraSync::getFiles(string path, vector<string>& files)
 {
     DIR *dir;
@@ -32,14 +32,14 @@ void CameraCameraSync::getFiles(string path, vector<string>& files)
         else if(ptr->d_type == 8) // file
             sprintf(base, "%s/%s", basePath, ptr->d_name);
         //puts(base);
-        files.push_back(std::string(base));
+        files.push_back(std::string(base)); // 将此文件夹下的所有图像名保存下来
     }
 }
-
+// 得到图像时间戳（输入分别是左右文件夹：oriDirName， dstDirName ）
 void CameraCameraSync::getImageTimeStamp(std::string oriDirName, std::string dstDirName)
 {
     //采用该函数遍历获得得队列不是顺序的，正好适合采用时间距离最近法来匹配
-    getFiles(oriDirName, oriImageLists_);
+    getFiles(oriDirName, oriImageLists_);  // 绝对路径存在类的成员里面
     getFiles(dstDirName, dstImageLists_);
     if(oriImageLists_.size() != dstImageLists_.size())
     {
@@ -48,7 +48,7 @@ void CameraCameraSync::getImageTimeStamp(std::string oriDirName, std::string dst
         return;
     }
 }
-
+// 
 int CameraCameraSync::getImageNumber()
 {
     if(oriImageLists_.size() != dstImageLists_.size())
@@ -67,35 +67,35 @@ double CameraCameraSync::getbaseTime(std::string pngfilenames, std::string patt)
     double baseImageTime = atof(baseFile.c_str());  
     return baseImageTime;
 }
-
+// 同步的函数接口
 std::vector<std::pair<std::string, std::string> > CameraCameraSync::imageTimeStampSyncFuncion()
 {
     std::vector<std::pair<std::string, std::string> > syncPairLists;
 
     double timeDifference;
-    for(auto baseFileNames : oriImageLists_)
+    for(auto baseFileNames : oriImageLists_) // 左图像为基准,遍历图像名
     {
         double maxSSIM = 0;
         std::string anchorFilenames;
         double baseImageTime = getbaseTime(baseFileNames, "png");
 
-        for(auto candidateFileNames : dstImageLists_)
+        for(auto candidateFileNames : dstImageLists_)  // 遍历右图像
         {
             double candidateImageTime = getbaseTime(candidateFileNames, "png");
-            timeDifference = std::abs(baseImageTime - candidateImageTime);
-            if(timeDifference <= 0.1)
+            timeDifference = std::abs(baseImageTime - candidateImageTime); // 时间差=====================================
+            if(timeDifference <= 0.1) // 100ms
             {
-                cv::Mat orgImage = cv::imread(baseFileNames, cv::IMREAD_GRAYSCALE);
+                cv::Mat orgImage = cv::imread(baseFileNames, cv::IMREAD_GRAYSCALE); // 灰度图像 IMREAD_GRAYSCALE
                 cv::Mat dstImage = cv::imread(candidateFileNames, cv::IMREAD_GRAYSCALE);
                 if( !orgImage.data || !dstImage.data )
                 { 
                     std::cout<< " --(!) Error reading images " << std::endl; 
                     break;
                 }
-                double ssim = evaluateImageTimeStampSync(orgImage, dstImage);
-                if (ssim > maxSSIM)
+                double ssim = evaluateImageTimeStampSync(orgImage, dstImage);  // 调用的ssim函数，评判左右两图片
+                if (ssim > maxSSIM)  // 采用SSIM结构相似性来作为图像相似性评判
                 {
-                    maxSSIM = ssim;
+                    maxSSIM = ssim; // 取最大的为最佳匹配
                     anchorFilenames = candidateFileNames;
                 }
             }
@@ -105,13 +105,13 @@ std::vector<std::pair<std::string, std::string> > CameraCameraSync::imageTimeSta
         std::cout << " Get the "<< baseFileNames << " time sync file is " << anchorFilenames << " and ssim is " << maxSSIM << std::endl;
     }
 
-    return syncPairLists;
+    return syncPairLists;  // 返回对应图像
 }
 
-
+// 采用SSIM结构相似性来作为图像相似性评判
 double CameraCameraSync::evaluateImageTimeStampSync(cv::Mat orgImage, cv::Mat dstImage)
 {
-    //这里采用SSIM结构相似性来作为图像相似性评判
+    //这里采用SSIM结构相似性来作为图像相似性评判=========================================
     double C1 = 6.5025, C2 = 58.5225;
     int width = orgImage.cols;
     int height = orgImage.rows;
@@ -119,12 +119,12 @@ double CameraCameraSync::evaluateImageTimeStampSync(cv::Mat orgImage, cv::Mat ds
     int width2 = dstImage.cols;
     int height2 = dstImage.rows;
 
-    double mean_x = 0;
+    double mean_x = 0; // 左右均值和方差
     double mean_y = 0;
     double sigma_x = 0;
     double sigma_y = 0;
     double sigma_xy = 0;
-    for (int v = 0; v < height; v++)
+    for (int v = 0; v < height; v++) // 窗口就算图像的宽高
     {
         for (int u = 0; u < width; u++)
         {
@@ -150,9 +150,10 @@ double CameraCameraSync::evaluateImageTimeStampSync(cv::Mat orgImage, cv::Mat ds
     double molecule = (2 * mean_x*mean_y + C1) * (2 * sigma_xy + C2);
     double denominator = (mean_x*mean_x + mean_y * mean_y + C1) * (sigma_x + sigma_y + C2);
     double ssim = molecule / denominator;
-    return ssim;
+    return ssim;  // 最终得到ssim
 }
 
+// 2 空间同步
 void CameraCameraSync::spatialSynchronization(cv::Mat srcImage1, cv::Mat srcImage2)
 {
     // 提取特征点    

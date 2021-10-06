@@ -11,7 +11,7 @@ CameraLidarSync::CameraLidarSync(const ros::NodeHandle& nh, const ros::NodeHandl
       threshold_(0.4),
       segradius_(10.0),
       delay_by_n_frames_(10),
-      max_image_age_s_(2),
+      max_image_age_s_(2), // 最大的图像存在的生命周期
       img_height_(1080),
       img_width_(1920)
 {
@@ -20,7 +20,7 @@ CameraLidarSync::CameraLidarSync(const ros::NodeHandle& nh, const ros::NodeHandl
     相机信息：
         型号为on 0233，FOV60
         采用lvds转usb传输，会出现信号延时以及帧率不稳定的问题
-    相机内参：
+    相机内参：(已经标定好的)
         fx: 1998.7356 
         fy: 1991.8909 
         cx: 851.8287 
@@ -44,6 +44,8 @@ CameraLidarSync::CameraLidarSync(const ros::NodeHandle& nh, const ros::NodeHandl
     //                 0.04087759,   	0.01505343,   	-0.99906721,   	-0.38569012,   
     //                 0.99591426,  	0.08030508,   	0.04197840,   	-0.59186737,  
     //                 0.00000000,   	0.00000000,   	0.00000000,   	1.00000000;
+
+
     //设定激光到相机的外参
     /*
     Lidar型号：禾赛40p激光雷达
@@ -55,14 +57,16 @@ CameraLidarSync::CameraLidarSync(const ros::NodeHandle& nh, const ros::NodeHandl
                     0.04087759,   	0.01505343,   	-0.99906721,   	-0.26569012,   
                     0.99591426,  	0.08030508,   	0.04197840,   	-0.59186737,  
                     0.00000000,   	0.00000000,   	0.00000000,   	1.00000000;
-    //订阅rosbag中topic为raw_image的图像流，长度为20，在imagcallback函数中进行处理
+    //订阅rosbag中topic为raw_image的图像流，长度为20，在imagcallback函数中进行处理============================
     image_sub_ = it_.subscribe("/raw_image", 20, &CameraLidarSync::imageCallback, this);
-    //订阅rosbag中topic为velodyne_points的点云流，长度为10，在pointCloudCallback函数中进行处理
+    //订阅rosbag中topic为velodyne_points的点云流，长度为10，在pointCloudCallback函数中进行处理========================
     pointcloud_sub_ = nh_private_.subscribe<sensor_msgs::PointCloud2>("/velodyne_points", 10, &CameraLidarSync::pointCloudCallback, this);
+
     //发布结果，topic为project_cloud_image
     pub_img_ = it_.advertise("/project_cloud_image", 20);
 }
 
+// 图像处理的回调函数
 void CameraLidarSync::imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
     ros::Time stamp;
@@ -79,11 +83,11 @@ void CameraLidarSync::imageCallback(const sensor_msgs::ImageConstPtr& msg)
     rgba8: CV_8UC4, RGB color image with an alpha channel
     其中mono8和bgr8是大多数OpenCV函数所期望的图像编码格式。
     */
-    cv_bridge::CvImagePtr image = cv_bridge::toCvCopy(msg, "mono8");
+    cv_bridge::CvImagePtr image = cv_bridge::toCvCopy(msg, "mono8"); // 灰度图格式 mono8
     image->header.stamp = stamp;
-    images_.push_back(*image);
+    images_.push_back(*image);  // 一直push_back()数据，后面需要清除旧的数据 ！！！
 
-    // clear old data 
+    // clear old data （2s40帧图片）
     /*
     删除旧的数据，由于采用list容器，所以容器会不断的追加数据，早期存放的数据就会失效，
     所以，如果图像容器中的最前和最后两张图片的时间差超过两秒钟，就删除容器中的最开始的图片
@@ -93,14 +97,14 @@ void CameraLidarSync::imageCallback(const sensor_msgs::ImageConstPtr& msg)
     2）可以防止帧率不稳定导致的丢帧；
     3）可以对该容器内的图像进行时间同步；
     */ 
-    while (((images_.back()).header.stamp - (images_.front()).header.stamp).toSec() > max_image_age_s_) {
+    while (((images_.back()).header.stamp - (images_.front()).header.stamp).toSec() > max_image_age_s_) {  // 2s
         images_.pop_front();
     }
 
 }
 
 
-// void CameraLidarSync::pointCloudCallback(const PointCloud::ConstPtr& msg)
+// 激光雷达为主 回调函数 void CameraLidarSync::pointCloudCallback(const PointCloud::ConstPtr& msg)
 void CameraLidarSync::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &laser_scan)
 {
     int index = -1;
@@ -110,7 +114,7 @@ void CameraLidarSync::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr 
     提示：参考上次课camera_imu的容器内时间同步
     */
     //判断容器内的图像是否满足足够的数量，这里选择10帧，主要是为了方便与激光雷达10帧所对应
-    if(images_.size() < delay_by_n_frames_)
+    if(images_.size() < delay_by_n_frames_) //为了对齐激光雷达10帧
     {
         return;
     }
@@ -118,7 +122,7 @@ void CameraLidarSync::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr 
     //所以，图像的帧率对整体影响不大
 
     //设定最小相机与激光时间差，这里的0.05表示50毫秒，由于图像为20Hz，即50毫秒，lidar为10Hz
-    float time_min = 0.05;
+    float time_min = 0.05;  // 50毫秒
 
     //找出图像list中与点云帧相对时间差小于time_min的图像，感兴趣的可以试验一下，等于50毫秒的情况
     int count = 0;
@@ -135,12 +139,12 @@ void CameraLidarSync::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr 
         }
         else if(time_diff < time_min){
             index = count;
-            time_min = time_diff;
+            time_min = time_diff;  //时间差最小
         }
         count += 1;
     }
 
-    //从点云中删除无效点
+    //从点云中删除无效点 removeNaNFromPointCloud()
     /*
     首先定义一个pcl::PointCloud<pcl::PointXYZI>格式的点云帧，
     然后将获取的PointCloud2格式的点云转换为pcl::PointCloud<pcl::PointXYZI>格式的点云
@@ -168,7 +172,7 @@ void CameraLidarSync::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr 
         point_cloud_lists_.push_back(*laser_cloud);
         return;
     }
-    else
+    else   // 只判断帧数=2的情况 两帧相邻点云同时存在
     {
         //这里开始进行插值处理，这里做了几个简化：1）没有考虑第一帧点云的对齐，2）没有进行图像时间校对，3）第二帧点云不一定在上一个图像时间序列中
         std::cout << "the image index is "<< index << std::endl;
@@ -177,7 +181,7 @@ void CameraLidarSync::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr 
             //取出index所对应的图像，由于这里采用的是std::list容器，取指定索引的指针方法不太一样，需要采用advance
             std::list<cv_bridge::CvImage>::iterator iter = images_.begin();
             //iter为list中第一帧的指针，advance为第一帧指针的偏移到index-1
-            advance(iter,index-1);
+            advance(iter,index-1); // 取索引值
             std::cout << "the image time is " << iter->header.stamp << std::endl;
             std::cout << "the lidar time is " << time << std::endl;
 
@@ -190,6 +194,7 @@ void CameraLidarSync::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr 
             *second_cloud = point_cloud_lists_[1];
 
             /*
+            点云滤波--用于压缩
             类ApproximateVoxelGrid根据给定的点云形成三维体素栅格，并利用所有体素的中心，点近似体素中包含的点集，这样完成下采样得到滤波结果。
             该类比较适合对海量点云数据在处理前进行数据压缩，特别是在特征提取等处理中选择合适的体素大小等尺度相关参数，可以很好地提高算法的效率。
             void setLeafSize (float lx, float ly, float lz)设置体素栅格叶大小，lx、ly、lz分别设置体素在XYZ方向上的尺寸
@@ -205,12 +210,13 @@ void CameraLidarSync::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr 
             std::cout << "Filtered cloud contains " << filtered_cloud->size ()
                 << " data points from cloud1_halfscan_a topic" << std::endl;
 
-            // 初始化带默认参数的NDT算法对象
+            // 初始化带默认参数的NDT算法对象   (Plus:常见 点云配准方法ICP&NDT)
             // Initializing Normal Distributions Transform (NDT).
             pcl::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI> ndt;
 
             /*
-            其中 ndt.setTransformationEpsilon() 即设置变换的 ϵ（两个连续变换之间允许的最大差值），这是判断优化过程是否已经收敛到最终解的阈值。
+            其中 
+            ndt.setTransformationEpsilon() 即设置变换的 ϵ（两个连续变换之间允许的最大差值），这是判断优化过程是否已经收敛到最终解的阈值。
             ndt.setStepSize(0.01) 即设置牛顿法优化的最大步长。
             ndt.setResolution(1.0) 即设置网格化时立方体的边长，网格大小设置在NDT中非常重要，太大会导致精度不高，太小导致内存过高，并且只有两幅点云相差不大的情况才能匹配。
             ndt.setMaximumIterations(500) 即优化的迭代次数，我们这里设置为500次，即当迭代次数达到500次或者收敛到阈值时，停止优化,
@@ -228,9 +234,9 @@ void CameraLidarSync::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr 
             ndt.setMaximumIterations (20);
 
             // Setting point cloud to be aligned.
-            ndt.setInputSource (filtered_cloud);
+            ndt.setInputSource (filtered_cloud);  // 输入
             // Setting point cloud to be aligned to.
-            ndt.setInputTarget (second_cloud);
+            ndt.setInputTarget (second_cloud);  // 输入
 
             //这里主要计算点云配准变换的估计。尤其是当两块点云差异较大时，得到更好的结果，
             // Set initial alignment estimate found using robot odometry.
@@ -240,8 +246,8 @@ void CameraLidarSync::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr 
             // Calculating required rigid transform to align the input cloud to the target cloud.
             ndt.align (*output_cloud, init_guess);
             std::cout << "Normal Distributions Transform has converged:" << ndt.hasConverged ()
-                    << " score: " << ndt.getFitnessScore () << std::endl;
-            std::cout << ndt.getFinalTransformation() << std::endl;
+                    << " score得分: " << ndt.getFitnessScore () << std::endl;
+            std::cout << ndt.getFinalTransformation() << std::endl; // 变换矩阵 getFinalTransformation
 
             // ////////////////////////align two point clouds//////////////////////////
             //执行变换，并将结果保存在新创建的‎‎ output_cloud_final ‎‎中,这个一般可以只要运行一次，其他直接转换即可，感兴趣自行试验
@@ -288,9 +294,11 @@ void CameraLidarSync::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr 
             if(output_cloud->points[i].x <= 0){
                 continue;
             }
+            // 点云转换到相机坐标系下
             float point_in_cam_x = output_cloud->points[i].x * laser_to_cam_(0, 0) + output_cloud->points[i].y * laser_to_cam_(0, 1) + output_cloud->points[i].z * laser_to_cam_(0, 2) + laser_to_cam_(0, 3);
             float point_in_cam_y = output_cloud->points[i].x * laser_to_cam_(1, 0) + output_cloud->points[i].y * laser_to_cam_(1, 1) + output_cloud->points[i].z * laser_to_cam_(1, 2) + laser_to_cam_(1, 3);
             float point_in_cam_z = output_cloud->points[i].x * laser_to_cam_(2, 0) + output_cloud->points[i].y * laser_to_cam_(2, 1) + output_cloud->points[i].z * laser_to_cam_(2, 2) + laser_to_cam_(2, 3);
+            // 得到像素坐标
             int x = (int)((camera_intrinsics_(0, 0) * point_in_cam_x + camera_intrinsics_(0, 1) * point_in_cam_y + camera_intrinsics_(0, 2) * point_in_cam_z) / point_in_cam_z);
             int y = (int)((camera_intrinsics_(1, 0) * point_in_cam_x + camera_intrinsics_(1, 1) * point_in_cam_y + camera_intrinsics_(1, 2) * point_in_cam_z) / point_in_cam_z);
             if(x > 0 && x < img_width_ && y > 0 && y < img_height_){
@@ -305,7 +313,7 @@ void CameraLidarSync::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr 
         header.stamp = laser_scan->header.stamp;
         header.frame_id = "/camera_init";
         pub_img_.publish(cv_bridge::CvImage(header, "bgr8", out_img).toImageMsg());
-        cv::imwrite("result/raw_cloud/" + std::to_string(time)+".png",out_img); 
+        cv::imwrite("result/raw_cloud/" + std::to_string(time)+".png",out_img);   // 保存图像====================
     }
 
 }

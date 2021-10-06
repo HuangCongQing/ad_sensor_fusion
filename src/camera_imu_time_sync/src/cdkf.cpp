@@ -42,7 +42,7 @@ void CDKF::rezeroTimestamps(const ros::Time& new_zero_timestamp,
   zero_timestamp_ = new_zero_timestamp;
 }
 
-// sync the measured timestamp based on the current filter state
+// 时间同步 sync the measured timestamp based on the current filter state
 void CDKF::getSyncedTimestamp(const ros::Time& received_timestamp,
                               ros::Time* synced_timestamp, double* delta_t, double* offset) {
   *synced_timestamp =
@@ -55,7 +55,7 @@ void CDKF::getSyncedTimestamp(const ros::Time& received_timestamp,
   int num_frames =
       std::round((received_timestamp - *synced_timestamp).toSec() / *delta_t);
 
-  if (std::abs(num_frames) > 10) {
+  if (std::abs(num_frames) > 10) {  // >10帧
     ROS_WARN_STREAM("Timesync is now off by "
                     << num_frames
                     << " frames, something must be going horribly wrong");
@@ -72,7 +72,7 @@ void CDKF::getSyncedTimestamp(const ros::Time& received_timestamp,
                                          << synced_timestamp->nsec);
   }
 }
-
+// 时间的预测
 void CDKF::predictionUpdate(const ros::Time& received_timestamp) {
   if (verbose_) {
     ROS_INFO_STREAM("Initial State: \n" << state_.transpose());
@@ -101,7 +101,7 @@ void CDKF::predictionUpdate(const ros::Time& received_timestamp) {
     ROS_INFO_STREAM("Predicted Cov: \n" << cov_);
   }
 }
-
+// 其他状态预测（角速度）
 void CDKF::measurementUpdate(const ros::Time& prev_stamp,
                              const ros::Time& current_stamp,
                              const double image_angular_velocity,
@@ -165,7 +165,7 @@ void CDKF::measurementUpdate(const ros::Time& prev_stamp,
     rezeroTimestamps(current_stamp);
   }
 }
-
+// 状态估计
 void CDKF::stateToMeasurementEstimate(
     const IMUList& imu_rotations, const ros::Time zero_stamp, bool calc_offset,
     const Eigen::VectorXd& input_state, const Eigen::VectorXd& noise,

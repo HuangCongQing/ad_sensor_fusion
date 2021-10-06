@@ -12,9 +12,9 @@ CameraImuTimeSync::CameraImuTimeSync(const ros::NodeHandle& nh,
       nh_private_(nh_private),
       it_(nh_private_),
       stamp_on_arrival_(false),
-      max_imu_data_age_s_(2.0),
-      delay_by_n_frames_(5),
-      focal_length_(460.0),
+      max_imu_data_age_s_(2.0), // IMU存在周期
+      delay_by_n_frames_(5),  // 帧率
+      focal_length_(460.0), // 焦距
       calc_offset_(true) {
   nh_private_.param("stamp_on_arrival", stamp_on_arrival_, stamp_on_arrival_);
   nh_private_.param("max_imu_data_age_s", max_imu_data_age_s_, max_imu_data_age_s_);
@@ -24,14 +24,15 @@ CameraImuTimeSync::CameraImuTimeSync(const ros::NodeHandle& nh,
 
   setupCDKF();
   
-  constexpr int kImageQueueSize = 10;
-  constexpr int kImuQueueSize = 100;
+  constexpr int kImageQueueSize = 10;  // image数据10hz
+  constexpr int kImuQueueSize = 100;  // IMU 100hz
   constexpr int kFloatQueueSize = 100;
-
+  // 订阅回调函数
   imu_sub_ = nh_private_.subscribe("/cgi610/imu", kImuQueueSize, &CameraImuTimeSync::imuCallback, this);
 std::cout << __LINE__ << " " << __FILE__ << " imu correct"  << std::endl;
   image_sub_ = it_.subscribe("/raw_image", kImageQueueSize, &CameraImuTimeSync::imageCallback, this);
   std::cout << __LINE__ << " " << __FILE__ << " image subscribe"  << std::endl;
+  // 发布 查看结果
   image_pub_ = it_.advertise("output/image", kImageQueueSize);
 std::cout << __LINE__ << " " << __FILE__ << " image publish "  << std::endl;
 
@@ -41,7 +42,7 @@ std::cout << __LINE__ << " " << __FILE__ << " image publish "  << std::endl;
     offset_pub_ = nh_private_.advertise<std_msgs::Float64>("offset", kFloatQueueSize);
   }
 }
-
+// CDKF卡尔曼滤波
 void CameraImuTimeSync::setupCDKF() {
   CDKF::Config config;
 
@@ -63,12 +64,12 @@ void CameraImuTimeSync::setupCDKF() {
 
 }
 
-
+// IMU回调函数
 void CameraImuTimeSync::imuCallback(const sensor_msgs::ImuConstPtr& msg) {
   static sensor_msgs::Imu prev_msg;
   static bool first_msg = true;
   
-  if (first_msg) {
+  if (first_msg) {  // 判断数据是否刚进来
     first_msg = false;
     imu_rotations_.emplace_back(msg->header.stamp, Eigen::Quaterniond(1.0, 0.0, 0.0, 0.0));
     prev_msg = *msg;
@@ -81,17 +82,17 @@ void CameraImuTimeSync::imuCallback(const sensor_msgs::ImuConstPtr& msg) {
         "Your imu messages are not monotonically increasing, expect garbage results.");
   }
 
-  // integrate imu reading
-  double half_delta_t = (msg->header.stamp - prev_msg.header.stamp).toSec() / 2.0;
-
+  // integrate imu reading 计算IMU运动状态
+  double half_delta_t = (msg->header.stamp - prev_msg.header.stamp).toSec() / 2.0;  // 当前数据和前一帧偏差
+  // 四元数和旋转向量的关系
   Eigen::Quaterniond delta_angle =
-      Eigen::AngleAxisd(half_delta_t * (msg->angular_velocity.x + prev_msg.angular_velocity.x),
+      Eigen::AngleAxisd(half_delta_t * (msg->angular_velocity.x + prev_msg.angular_velocity.x),  // 当前帧和前一帧角速度变化
                         Eigen::Vector3d::UnitX()) *
       Eigen::AngleAxisd(half_delta_t * (msg->angular_velocity.y + prev_msg.angular_velocity.y),
                         Eigen::Vector3d::UnitY()) *
       Eigen::AngleAxisd(half_delta_t * (msg->angular_velocity.z + prev_msg.angular_velocity.z),
                         Eigen::Vector3d::UnitZ());
-
+  // 保存到imu_rotations_
   imu_rotations_.emplace_back(
       prev_msg.header.stamp + ros::Duration(half_delta_t),
       imu_rotations_.back().second * delta_angle);
@@ -104,23 +105,23 @@ void CameraImuTimeSync::imuCallback(const sensor_msgs::ImuConstPtr& msg) {
 
   prev_msg = *msg;
 }
-
+// image回调函数
 void CameraImuTimeSync::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
   ros::Time stamp;
-  if (stamp_on_arrival_) {
+  if (stamp_on_arrival_) {  // 从摄像头直接采集数据，就有打时间戳的过程
     stamp = ros::Time::now();
   } else {
-    stamp = msg->header.stamp;
+    stamp = msg->header.stamp;  // 已经打好了的
   }
 
   static std::list<cv_bridge::CvImage> images;
-  cv_bridge::CvImagePtr image = cv_bridge::toCvCopy(msg, "mono8");
+  cv_bridge::CvImagePtr image = cv_bridge::toCvCopy(msg, "mono8"); // 解析成图像
 
   // fire the image back out with minimal lag
-  if (images.size() >= (delay_by_n_frames_ - 1)) {
+  if (images.size() >= (delay_by_n_frames_ - 1)) { // 判断达到一定数据量
     std_msgs::Float64 delta_t, offset;
     cdkf_->getSyncedTimestamp(stamp, &(image->header.stamp), &(delta_t.data), &(offset.data));
-    image_pub_.publish(image->toImageMsg());
+    image_pub_.publish(image->toImageMsg()); // 发布
     delta_t_pub_.publish(delta_t);
     if (calc_offset_) {
       offset_pub_.publish(offset);
@@ -133,6 +134,7 @@ void CameraImuTimeSync::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
   images.push_back(*image);
   std::cout << "delay by a few messages "<< images.size() << std::endl;
 
+  // 之前的数据删除
   if (images.size() < delay_by_n_frames_) {
     cdkf_->rezeroTimestamps(images.front().header.stamp, true);
     return;
@@ -143,8 +145,9 @@ void CameraImuTimeSync::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
   }
   std::cout << __LINE__ << " " << __FILE__ << " " << imu_rotations_.size() << std::endl;
 
+  // 两张图片的角度变换
   double image_angle = 0.0;
-  if (calc_offset_) {
+  if (calc_offset_) { 
     image_angle = calcAngleBetweenImages(images.begin()->image, std::next(images.begin())->image, focal_length_);
   }
   std::cout << __LINE__ << " " << __FILE__ << " " << imu_rotations_.size() << std::endl;

@@ -4,7 +4,7 @@
  * @Company(School): UCAS
  * @Email: 1756260160@qq.com
  * @Date: 2021-09-21 14:57:27
- * @LastEditTime: 2021-09-21 15:02:28
+ * @LastEditTime: 2021-10-30 20:45:47
  * @FilePath: /ad_sensor_fusion/README.md
 -->
 # ad_sensor_fusion
@@ -33,3 +33,8 @@
 用于双目和毫米波雷达的数据连接为：https://pan.baidu.com/s/1vvajIvn-rdKwFkhzZIrdxA提取码：otwn
 
 其他数据集为：https://pan.baidu.com/s/1fXj-qupzd0ZeKOYMv3rFXg，提取码为：lwf9
+
+# learning
+
+* 相机雷达同步[camera_lidar_sync](src/camera_lidar_sync/src/camera_lidar_sync.cpp)
+* 相机雷达融合[camera_lidar_fusion](src/camera_lidar_fusion/sensor_processing/src/sensor_processing_lib/sensor_fusion.cpp)

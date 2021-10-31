@@ -4,7 +4,7 @@
  * @Company(School): UCAS
  * @Email: 1756260160@qq.com
  * @Date: 2021-09-21 14:57:27
- * @LastEditTime: 2021-10-31 13:01:50
+ * @LastEditTime: 2021-10-31 16:25:31
  * @FilePath: /ad_sensor_fusion/README.md
 -->
 # ad_sensor_fusion
@@ -43,8 +43,13 @@ set(OpenCV_DIR "/media/hcq/hcq4T/多传感器融合资料/07多相机间的同�
 
 # learning
 
+* 多相机同步[camera_camera_sync](src/camera_camera_sync/src/main.cpp)
+    * 修改路径：src/camera_camera_sync/src/main.cpp
+    * `./devel/lib/camera_camera_sync/camera_camera_sync_node`
+
 * 相机雷达同步[camera_lidar_sync](src/camera_lidar_sync/src/camera_lidar_sync.cpp)
-`./devel/lib/camera_camera_sync/camera_camera_sync_node`
+    * ` rosbag play '/media/hcq/hcq4T/多传感器融合资料/99 数据/practice_1_2_camera_imu_sync/test.bag'`
+    *  `rosrun camera_lidar_sync camera_lidar_sync_node`
 
 * 相机雷达融合[camera_lidar_fusion](src/camera_lidar_fusion/sensor_processing/src/sensor_processing_lib/sensor_fusion.cpp)
 
@@ -54,3 +59,7 @@ roslaunch detection detection.launch home_dir:=/home/hcq/data/data_ad_sensor_fus
 roslaunch tracking tracking.launch home_dir:=/home/hcq/data/data_ad_sensor_fusion/99data/practice_2_3_camera_lidar/0012
 
 ```
+
+* 相机毫米波融合[camera_radar_fusion](src/camera_radar_fusion/src/main.cpp)
+    * 路径修改：src/camera_radar_fusion/src/main.cpp
+    * `rosrun camera_radar_fusion camera_radar_fusion_node`

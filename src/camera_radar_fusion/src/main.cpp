@@ -7,12 +7,12 @@
 using RadarCameraSpatialSyncPtr = std::shared_ptr<radar_camera_spatial_sync::RadarCameraSpatialSync>;
 
 int main() {
-    std::string calib_file_path = "./datasets/practice_2_4_camera_radar_data/front_left_right_camera.yml";
-    std::string left_camera_path = "./datasets/practice_2_4_camera_radar_data/left_camera";
-    std::string left_camera_label = "./datasets/practice_2_4_camera_radar_data/label_left_camera";
-    std::string right_camera_path = "./datasets/practice_2_4_camera_radar_data/right_camera";
-    std::string right_camera_label = "./datasets/practice_2_4_camera_radar_data/label_right_camera";
-    std::string front_radar_path = "./datasets/practice_2_4_camera_radar_data/radar_front_center";
+    std::string calib_file_path = "/home/hcq/data/data_ad_sensor_fusion/99data/practice_2_4_camera_radar_data/front_left_right_camera.yml";  // 修改路径
+    std::string left_camera_path = "/home/hcq/data/data_ad_sensor_fusion/99data/practice_2_4_camera_radar_data/left_camera";
+    std::string left_camera_label = "/home/hcq/data/data_ad_sensor_fusion/99data/practice_2_4_camera_radar_data/label_left_camera";
+    std::string right_camera_path = "/home/hcq/data/data_ad_sensor_fusion/99data/practice_2_4_camera_radar_data/right_camera";
+    std::string right_camera_label = "/home/hcq/data/data_ad_sensor_fusion/99data/practice_2_4_camera_radar_data/label_right_camera";
+    std::string front_radar_path = "/home/hcq/data/data_ad_sensor_fusion/99data/practice_2_4_camera_radar_data/radar_front_center";
     EKF_API *ekf_api = new EKF_API();
     //left
     std::vector<cv::String> left_camera_datas, left_camera_labels;
@@ -91,7 +91,7 @@ int main() {
     radar_camera_spatial_sync::ExecuteEstimate3Dvs3DPose(left_camera_points_vec,radar_points_vec,rotation,translation,error);
     std::cout <<"rotation of radar to left camera: "<< std::endl << rotation << std::endl;
     std::vector<cv::Point3d> result_points;
-    radar_camera_spatial_sync::Point2Camera(radar_points_vec, result_points, rotation, translation);
+    radar_camera_spatial_sync::Point2Camera(radar_points_vec, result_points, rotation, translation);  //毫米波雷达数据往相机投影
 
     std::vector<Measurement> measurement_pack_list;
 
@@ -99,10 +99,10 @@ int main() {
     {
         Measurement temp;
 		temp.raw_measurements_ = VectorXd(2);
-        temp.raw_measurements_ << result.x, result.z;
+        temp.raw_measurements_ << result.x, result.z;  // 基于xz来进行跟踪
         temp.timestamp_ = 50; //ms
         measurement_pack_list.push_back(temp); 
     }
-    ekf_api->process(measurement_pack_list);
+    ekf_api->process(measurement_pack_list);  //EKF的实现过程 重点！=================================================
     return 0;
 }

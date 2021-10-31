@@ -19,7 +19,7 @@ SensorFusion::SensorFusion(ros::NodeHandle nh, ros::NodeHandle private_nh):
 	pcl_semantic_(new VRGBPointCloud),
 	pcl_sparse_semantic_(new VRGBPointCloud),
 	cloud_sub_(nh, "/kitti/velo/pointcloud", 2),
- 	image_sub_(nh,	"/kitti/camera_color_left/semantic", 2),
+ 	image_sub_(nh,	"/kitti/camera_color_left/semantic", 2), // 已经分割好的图像
 	sync_(MySyncPolicy(10), cloud_sub_, image_sub_){
 
 	// Get data path
@@ -160,7 +160,7 @@ SensorFusion::SensorFusion(ros::NodeHandle nh, ros::NodeHandle private_nh):
 		"/sensor/image/bev_semantic_grid", 2);
 
 	// Define Subscriber
-	sync_.registerCallback(boost::bind(&SensorFusion::process, this, _1, _2));
+	sync_.registerCallback(boost::bind(&SensorFusion::process, this, _1, _2));  // callback函数  SensorFusion::process
 
 	// Init counter for publishing
 	time_frame_ = 0;
@@ -171,20 +171,20 @@ SensorFusion::~SensorFusion(){
 }
 
 void SensorFusion::process(
-		const PointCloud2::ConstPtr & cloud,
-		const Image::ConstPtr & image
+		const PointCloud2::ConstPtr & cloud,  //输入点云
+		const Image::ConstPtr & image  // 输入图像
 	){
 
 	// Preprocess point cloud
-	//对点云进行处理
+	//1 对点云进行处理
 	processPointCloud(cloud);
 
 	// Preprocess image
-	//仅仅是来保存图像
+	//2 仅仅是来保存图像
 	processImage(image);
 
 	// Fuse sensors by mapping elevated point cloud into semantic segmentated image
-	//将地面以上的点云映射到语义分割的图像中
+	//3 将地面以上的点云映射到语义分割的图像中================================================
 	mapPointCloudIntoImage(pcl_elevated_, image);
 
 	// Print sensor fusion
@@ -198,7 +198,7 @@ void SensorFusion::process(
 	time_frame_++;
 
 }
-
+// 第一步：
 void SensorFusion::processPointCloud(const PointCloud2::ConstPtr & cloud){
 
 /******************************************************************************
@@ -238,12 +238,12 @@ void SensorFusion::processPointCloud(const PointCloud2::ConstPtr & cloud){
 		float angle = std::abs( std::atan2(point.y, point.x) );
 		if(angle < params_.lidar_opening_angle){
 
-			// Determine range of lidar point and check
+			// Determine range of lidar point and check 范围
 			float range = std::sqrt(point.x * point.x + point.y * point.y);
 			if(range > params_.grid_range_min &&
 				range < params_.grid_range_max){
 
-				// Check height of lidar point
+				// Check height of lidar point 高度
 				if(point.z > params_.lidar_z_min){
 
 					// Add index for filtered point cloud
@@ -314,13 +314,13 @@ void SensorFusion::processPointCloud(const PointCloud2::ConstPtr & cloud){
 				(cell.z_max - cell.z_min < params_.grid_cell_height)){
 
 				// Push back cell attributes to ground plane cloud
-				pcl_ground_plane_->points.push_back(
+				pcl_ground_plane_->points.push_back( //地面=================================================
 					VPoint(cell.x_min, cell.y_min, cell.z_min));
 			}
 		}
 	}
 
-	//下面就是使用PCL和RANSAC来估计地平面，主要涉及到点云分割模块SACSegmentation
+	//下面就是使用PCL和RANSAC来估计地平面，主要涉及到点云分割模块SACSegmentation===============================
 	// Estimate the ground plane using PCL and RANSAC
 	pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
 	pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
@@ -336,16 +336,16 @@ void SensorFusion::processPointCloud(const PointCloud2::ConstPtr & cloud){
 	segmentation.segment(*inliers, *coefficients);  //输出提取点的索引和目标模型的参数
 
 	// Divide ground plane cloud in inlier cloud and outlier cloud
-	//提取地面点云中的inlier cloud
+	//提取地面点云中的inlier cloud  地面点
 	pcl_extractor.setInputCloud(pcl_ground_plane_);
 	pcl_extractor.setIndices(inliers);
 	pcl_extractor.setNegative(false);
 	pcl_extractor.filter(*pcl_ground_plane_inliers_); //在下采样基础之上进行分割和ExtractInliers滤波的  结果就是一个平面模型映射的结果
 
-	//提取地面点云中的outlier cloud
+	//提取地面点云中的outlier cloud 非地面点
 	pcl_extractor.setInputCloud(pcl_ground_plane_);
 	pcl_extractor.setIndices(inliers);
-	pcl_extractor.setNegative(true);
+	pcl_extractor.setNegative(true); // 不符合要求的
 	pcl_extractor.filter(*pcl_ground_plane_outliers_); //在体素栅格下采样基础之上得到的点云数据和提取出的不符合条件的点云数据进行调换，进入下一轮循环
 
 	// Sanity check
@@ -394,7 +394,7 @@ void SensorFusion::processPointCloud(const PointCloud2::ConstPtr & cloud){
 			// Buffer variables
 			float x,y;
 
-			// Get velodyne coodinates
+			// Get velodyne coodinates  极坐标系转化为栅格xy坐标系===========================
 			fromPolarCellToVeloCoords(s, b, x, y);
 
 			// Get ground height
@@ -421,7 +421,7 @@ void SensorFusion::processPointCloud(const PointCloud2::ConstPtr & cloud){
 				cell.height = polar_grid_[s][b].z_max - cell.ground;
 
 				// If cell height big enough fill cell as occupied
-				if(cell.height > params_.grid_cell_height){
+				if(cell.height > params_.grid_cell_height){ //  依据高度判断是否occupied
 
 					cell.idx = PolarCell::OCCUPIED;
 
@@ -558,13 +558,14 @@ void SensorFusion::processPointCloud(const PointCloud2::ConstPtr & cloud){
 	grid_occupancy_pub_.publish(occ_grid_);
 }
 
+// 仅仅是来保存图像
 void SensorFusion::processImage(const Image::ConstPtr & msg){
 
 /******************************************************************************
 	读取分割后的图像信息，然后保存发布
  */
  	cv_bridge::CvImagePtr imagePtr = cv_bridge::toCvCopy(msg, "bgr8");
-	sem_image_ = imagePtr->image.clone();
+	sem_image_ = imagePtr->image.clone(); // 得到分割的image
 
 	// Sanity check if image is loaded correctly
 	if(sem_image_.cols == 0 || sem_image_.rows == 0){
@@ -574,10 +575,10 @@ void SensorFusion::processImage(const Image::ConstPtr & msg){
 
 	// Publish
 	cv_bridge::CvImage cv_semantic_image;
-	cv_semantic_image.image = sem_image_;
+	cv_semantic_image.image = sem_image_;  // 分割好的image
 	cv_semantic_image.encoding = "bgr8";
 	cv_semantic_image.header.stamp = msg->header.stamp;
-	image_semantic_pub_.publish(cv_semantic_image.toImageMsg());
+	image_semantic_pub_.publish(cv_semantic_image.toImageMsg()); // 发布
 }
 
 void SensorFusion::mapPointCloudIntoImage(const VPointCloud::Ptr cloud,
@@ -603,10 +604,10 @@ void SensorFusion::mapPointCloudIntoImage(const VPointCloud::Ptr cloud,
 	// Project the matrix from velodyne coordinates to the image plane
 	//将定义的点云矩阵投影到图像平面,这里的外参都已经给出了
 	MatrixXf matrix_image_points = 
-		tools_.transformVeloToImage(matrix_velodyne_points);
+		tools_.transformVeloToImage(matrix_velodyne_points); //点云投影到图像  src/camera_lidar_fusion/helper/src/tools.cpp
 
 	// Get image format
-	int img_width = sem_image_.cols;
+	int img_width = sem_image_.cols;  //sem_image_分割后的图像数据
 	int img_height = sem_image_.rows;
 
 	// Clear semantic cloud
@@ -620,7 +621,7 @@ void SensorFusion::mapPointCloudIntoImage(const VPointCloud::Ptr cloud,
 		const int & img_x = matrix_image_points(0, i);
 		const int & img_y = matrix_image_points(1, i);
 		const int & img_z = matrix_image_points(2, i);
-
+		// 判断点云投影的图像在图像数据中
 		if( (img_x >= 0 && img_x < img_width) &&
 			(img_y >= 0 && img_y < img_height) &&
 			(img_z >= 0)){
@@ -678,7 +679,7 @@ void SensorFusion::mapPointCloudIntoImage(const VPointCloud::Ptr cloud,
 		fromVeloCoordsToCartesianCell(point.x, point.y, grid_x, grid_y);
 		int grid_occ = grid_y * params_.grid_width + grid_x;
 
-		// Get semantic class
+		// Get semantic class 类别
 		int semantic_class = tools_.SEMANTIC_COLOR_TO_CLASS[
 			point.r + point.g + point.b];
 
@@ -695,7 +696,7 @@ void SensorFusion::mapPointCloudIntoImage(const VPointCloud::Ptr cloud,
 
 	// Loop over hash table to find most dominant semantic label
 	std::map<int, std::map<int,int> >::iterator it;
-	for(it = cell_hash_table.begin(); it != cell_hash_table.end(); it++ ){
+	for(it = cell_hash_table.begin(); it != cell_hash_table.end(); it++ ){  // 遍历cell_hash_table
 
 		// Loop through all hits in cell and determine best semantic label
 		std::map<int,int>::iterator it2;

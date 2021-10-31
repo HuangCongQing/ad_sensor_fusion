@@ -122,8 +122,8 @@ void UnscentedKF::process(const ObjectArrayConstPtr & detected_objects){
 	// Read current time
 	double time_stamp = detected_objects->header.stamp.toSec();
 
-	// All other frames
-	if(is_initialized_){
+	// All other frames // 当前帧还是第一帧
+	if(is_initialized_){  // 当前帧还是第一帧
 
 		// Calculate time difference between frames
 		double delta_t = time_stamp - last_time_stamp_;
@@ -132,13 +132,13 @@ void UnscentedKF::process(const ObjectArrayConstPtr & detected_objects){
 		//进行下一时刻的预测
 		Prediction(delta_t);
 
-		// Data association
-		GlobalNearestNeighbor(detected_objects);
+		// Data association 数据关联(前后帧)
+		GlobalNearestNeighbor(detected_objects);  // 最近邻
 
-		// Update
+		// Update 更新
 		Update(detected_objects);
 
-		// Track management
+		// Track management 航迹管理
 		TrackManagement(detected_objects);
 
 	}
@@ -166,6 +166,8 @@ void UnscentedKF::process(const ObjectArrayConstPtr & detected_objects){
 	// Increment time frame
 	time_frame_++;
 }
+
+// 预测过程
 void UnscentedKF::Prediction(const double delta_t){
 
 	// Buffer variables
@@ -185,12 +187,12 @@ void UnscentedKF::Prediction(const double delta_t){
 	//生成扩充sigma点集，主要包括：1）填充mean state；2）填充协方差矩阵；3）创建augmented sigma点集
  */
 
-		// Fill augmented mean state
+		// Fill augmented mean state 均值 
 		x_aug.head(5) = track.sta.x;
 		x_aug(5) = 0;
 		x_aug(6) = 0;
 
-		// Fill augmented covariance matrix
+		// Fill augmented covariance matrix 协方差矩阵
 		P_aug.fill(0.0);
 		P_aug.topLeftCorner(5,5) = track.sta.P;
 		P_aug(5,5) = params_.tra_std_acc * params_.tra_std_acc;
@@ -314,7 +316,7 @@ void UnscentedKF::GlobalNearestNeighbor(
 		float gate;
 		float box_gate;
 
-		// Pedestrian
+		// Pedestrian  关联判断类别信息============================================================================
 		if(tracks_[i].sem.id == 11){
 			gate = params_.da_ped_dist_pos;
 			box_gate = params_.da_ped_dist_form;
@@ -332,7 +334,7 @@ void UnscentedKF::GlobalNearestNeighbor(
 		for(int j = 0; j < detected_objects->list.size(); ++j){
 
 			// Calculate distance between track and detected object
-			if(tracks_[i].sem.id == detected_objects->list[j].semantic_id){
+			if(tracks_[i].sem.id == detected_objects->list[j].semantic_id){  //预测之后的状态和当前检测的关联=======================================
 				float dist = CalculateDistance(tracks_[i], 
 					detected_objects->list[j]);
 
@@ -500,7 +502,7 @@ void UnscentedKF::Update(const ObjectArrayConstPtr & detected_objects){
 			S = S + R_laser_;
 
 /******************************************************************************
- * 2. Update state vector and covariance matrix
+ * 2. Update state vector and covariance matrix 更新状态变量和协方差
  */
 			// Kalman gain K;
 			MatrixXd K = Tc * S.inverse();
@@ -517,7 +519,7 @@ void UnscentedKF::Update(const ObjectArrayConstPtr & detected_objects){
 			track.hist.bad_age = 0;
 
 /******************************************************************************
- * 3. Update geometric information of track
+ * 3. Update geometric information of track  更新几何信息
  */
 			// Calculate area of detection and track
 			float det_area = 
@@ -595,7 +597,7 @@ void UnscentedKF::TrackManagement(const ObjectArrayConstPtr & detected_objects){
 	// Clear duplicated tracks
 	for(int i = tracks_.size() - 1; i >= 0; --i){
 		for(int j = i - 1; j >= 0  ; --j){
-			float dist = CalculateEuclideanDistanceBetweenTracks(tracks_[i], tracks_[j]);
+			float dist = CalculateEuclideanDistanceBetweenTracks(tracks_[i], tracks_[j]);  // 两个框之间的协方差距离，是否有重叠！！！！！！===================
 			// ROS_INFO("DIST T [%d] and T [%d] = %f ", tracks_[i].id, tracks_[j].id, dist);
 			if(dist < params_.tra_min_dist_between_tracks){
 				ROS_WARN("TOO CLOSE: T [%d] and T [%d] = %f ->  T [%d] deleted ", 
@@ -660,9 +662,9 @@ void UnscentedKF::setTrackHeight(Track & track, const float h){
 	// Exploit semantic id to set a minimum height for pedestrians/cars
 
 	if (track.sem.id == 11)
-		track.geo.height = std::max(1.7f, h);
+		track.geo.height = std::max(1.7f, h); //行人
 	else if(track.sem.id == 13)
-		track.geo.height = std::max(1.3f, h);
+		track.geo.height = std::max(1.3f, h);// 小车
 	else
 		ROS_WARN("Unusual semantic label %d", track.sem.id);
 }

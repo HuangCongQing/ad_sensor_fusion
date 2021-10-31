@@ -13,7 +13,8 @@
   <arg name="delay" default="3" />
 
   <!-- Play rosbag file -->
-  <node pkg="rosbag" type="play" name="player" args="-r $(arg speed) -d $(arg delay) $(arg home_dir)/kitti_data/$(arg scenario)/synchronized_data.bag"/>
+  <!-- <node pkg="rosbag" type="play" name="player" args="-r $(arg speed) -d $(arg delay) $(arg home_dir)/kitti_data/$(arg scenario)/synchronized_data.bag"/> -->
+  <node pkg="rosbag" type="play" name="player" args="-r $(arg speed) -d $(arg delay) $(arg home_dir)/synchronized_data.bag"/>
 
   <!-- Run the sensor setup node -->
   <node pkg="sensor_processing" type="sensor_setup" name="sensor_setup_node" output="screen">

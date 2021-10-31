@@ -4,7 +4,7 @@
  * @Company(School): UCAS
  * @Email: 1756260160@qq.com
  * @Date: 2021-09-21 14:57:27
- * @LastEditTime: 2021-10-30 20:45:47
+ * @LastEditTime: 2021-10-31 13:01:50
  * @FilePath: /ad_sensor_fusion/README.md
 -->
 # ad_sensor_fusion
@@ -34,7 +34,23 @@
 
 其他数据集为：https://pan.baidu.com/s/1fXj-qupzd0ZeKOYMv3rFXg，提取码为：lwf9
 
+# 环境配置
+* 注意，在每个模块里CMakeLists.txt添加
+
+```
+set(OpenCV_DIR "/media/hcq/hcq4T/多传感器融合资料/07多相机间的同步实战/opencv/3rdparty/share/OpenCV")
+```
+
 # learning
 
 * 相机雷达同步[camera_lidar_sync](src/camera_lidar_sync/src/camera_lidar_sync.cpp)
+`./devel/lib/camera_camera_sync/camera_camera_sync_node`
+
 * 相机雷达融合[camera_lidar_fusion](src/camera_lidar_fusion/sensor_processing/src/sensor_processing_lib/sensor_fusion.cpp)
+
+```
+roslaunch sensor_processing sensor_processing.launch home_dir:=/home/hcq/data/data_ad_sensor_fusion/99data/practice_2_3_camera_lidar/0012
+roslaunch detection detection.launch home_dir:=/home/hcq/data/data_ad_sensor_fusion/99data/practice_2_3_camera_lidar/0012
+roslaunch tracking tracking.launch home_dir:=/home/hcq/data/data_ad_sensor_fusion/99data/practice_2_3_camera_lidar/0012
+
+```

@@ -15,7 +15,7 @@ DbScan::DbScan(ros::NodeHandle nh, ros::NodeHandle private_nh):
 		params_.grid_range_max);
 	private_nh_.param("grid/cell/size", params_.grid_cell_size,
 		params_.grid_cell_size);
-	private_nh_.param("pedestrian/spawn/side/min", params_.ped_spawn.side_min,
+	private_nh_.param("pedestrian/spawn/side/min", params_.ped_spawn.side_min, //  行人信息
 		params_.ped_spawn.side_min);
 	private_nh_.param("pedestrian/spawn/side/max", params_.ped_spawn.side_max,
 		params_.ped_spawn.side_max);
@@ -25,7 +25,7 @@ DbScan::DbScan(ros::NodeHandle nh, ros::NodeHandle private_nh):
 		params_.ped_spawn.height_max);
 	private_nh_.param("pedestrian/spawn/semantic/min", params_.ped_spawn.semantic_min,
 		params_.ped_spawn.semantic_min);
-	private_nh_.param("car/spawn/side/min", params_.car_spawn.side_min,
+	private_nh_.param("car/spawn/side/min", params_.car_spawn.side_min,  // car信息
 		params_.car_spawn.side_min);
 	private_nh_.param("car/spawn/side/max", params_.car_spawn.side_max,
 		params_.car_spawn.side_max);
@@ -109,14 +109,14 @@ void DbScan::process(const Image::ConstPtr & image_detection_grid){
 		return;
 	}
 
-	// Run DbScan algorithm
+	// Run DbScan algorithm 运行descan得到聚类信息
 	cv::Mat grid = cv_det_grid_ptr->image.clone(); 
 	runDbScan(grid);
 
 	// Determine cluster information
 	filterClusters(cv_det_grid_ptr->image);
 
-	// Publish object list
+	// Publish object list 目标列表
 	fillObjectList();
 	object_array_.header = image_detection_grid->header;
 	object_array_pub_.publish(object_array_);
@@ -143,10 +143,9 @@ void DbScan::runDbScan(cv::Mat grid){
 	// Clear previous Clusters
 	clusters_.clear();
 
-	// Loop through image
+	// Loop through image 遍历grid==================================================================
 	for(int y = 0; y < grid.rows; y++){
 		for(int x = y; y < grid.cols - x; x++){
-			
 			//依靠semantic_class获取聚类kernel size的大小
 			// Get semantic
 			int semantic_class = grid.at<cv::Vec3f>(y,x)[0];
@@ -174,6 +173,7 @@ void DbScan::runDbScan(cv::Mat grid){
 			std::vector<cv::Point> non_neighbor_list;
 
 			// Search for neighbor cells with same semantic until queue is empty
+			// 以下判断核心点、边界点还是噪声点，
 			while(!neighbor_queue.empty()){
 
 				// Store cell
@@ -266,6 +266,7 @@ void DbScan::runDbScan(cv::Mat grid){
 	number_of_clusters_ = clusters_.size();
 }
 
+// 拟合最小矩形（主要判断人和车的）
 void DbScan::filterClusters(const cv::Mat grid){
 
 	// Clear buffer
@@ -315,7 +316,7 @@ void DbScan::filterClusters(const cv::Mat grid){
 		c.geometric.z = min_low_z;
 		c.geometric.height = max_high_z - min_low_z;
 
-		// Get orientation of bounding box
+		// Get orientation of bounding box 得到角度信息=====================================================
 		// Minus since opencv y,x is the opposite of the velodyne frame
 		c.geometric.orientation = -rect.angle;
 
@@ -335,7 +336,7 @@ void DbScan::filterClusters(const cv::Mat grid){
 				if(spawnCar(c)){
 					c.is_new_track = true;
 				}
-				addObject(c);
+				addObject(c);  //加载车
 			}
 		}
 		// Pedestrian
@@ -344,12 +345,13 @@ void DbScan::filterClusters(const cv::Mat grid){
 				if(spawnPed(c)){
 					c.is_new_track = true;
 				}
-				addObject(c);
+				addObject(c);  // 加载行人
 			}
 		}
 	}
 }
 
+// 把人和车两个属性发布出去
 void DbScan::fillObjectList(){
 
 	// Transform objects in camera and world frame

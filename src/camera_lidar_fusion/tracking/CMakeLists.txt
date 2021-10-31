@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   helper
 )
-
+set(OpenCV_DIR "/media/hcq/hcq4T/多传感器融合资料/07多相机间的同步实战/opencv/3rdparty/share/OpenCV")  # 添加
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 

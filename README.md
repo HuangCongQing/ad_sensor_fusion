@@ -4,7 +4,7 @@
  * @Company(School): UCAS
  * @Email: 1756260160@qq.com
  * @Date: 2021-09-21 14:57:27
- * @LastEditTime: 2021-10-31 16:25:31
+ * @LastEditTime: 2021-10-31 16:37:38
  * @FilePath: /ad_sensor_fusion/README.md
 -->
 # ad_sensor_fusion
@@ -35,6 +35,9 @@
 其他数据集为：https://pan.baidu.com/s/1fXj-qupzd0ZeKOYMv3rFXg，提取码为：lwf9
 
 # 环境配置
+
+参考：https://www.yuque.com/huangzhongqing/eozhay/zkh3re
+
 * 注意，在每个模块里CMakeLists.txt添加
 
 ```

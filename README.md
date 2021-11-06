@@ -4,7 +4,7 @@
  * @Company(School): UCAS
  * @Email: 1756260160@qq.com
  * @Date: 2021-09-21 14:57:27
- * @LastEditTime: 2021-10-31 16:37:38
+ * @LastEditTime: 2021-11-06 21:14:15
  * @FilePath: /ad_sensor_fusion/README.md
 -->
 # ad_sensor_fusion
@@ -66,3 +66,6 @@ roslaunch tracking tracking.launch home_dir:=/home/hcq/data/data_ad_sensor_fusio
 * 相机毫米波融合[camera_radar_fusion](src/camera_radar_fusion/src/main.cpp)
     * 路径修改：src/camera_radar_fusion/src/main.cpp
     * `rosrun camera_radar_fusion camera_radar_fusion_node`
+
+
+* 雷达毫米波融合[]()

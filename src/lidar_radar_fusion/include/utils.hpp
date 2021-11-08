@@ -28,12 +28,12 @@ namespace lidar_radar_fusion {
     typedef long long TimeStamp;
     typedef pcl::PointXYZ Point;
     typedef pcl::PointCloud<Point> PointCloud;
-
+    // 结构体
     struct ObjectInfo {
         int id = -1;
         TimeStamp time_stamp = -1;
 
-        Eigen::Vector3d position{0.0,0.0,0.0};
+        Eigen::Vector3d position{0.0,0.0,0.0}; // xyz
     };
 
     struct TrackObject {

@@ -1,7 +1,7 @@
 #ifndef __LIDAR_RADAR_FUSION_TASK_HPP__
 #define __LIDAR_RADAR_FUSION_TASK_HPP__
 #include "utils.hpp"
-#include "lidar_radar_fusion.hpp"
+#include "lidar_radar_fusion.hpp"  // src/lidar_radar_fusion/include/lidar_radar_fusion.hpp
 
 namespace lidar_radar_fusion {
     
@@ -17,8 +17,8 @@ namespace lidar_radar_fusion {
     private:
         void ParseDataPath(const std::vector<cv::String>& data_list, 
                            std::unordered_map<std::string, std::string>& data_list_map);
-        void DataSync();
-        void LoadObjectsFromFile(const TimeStamp& time_stamp,const std::string& file_path, std::vector<ObjectInfo>& objects, bool is_lidar = false);
+        void DataSync(); // 时间对齐
+        void LoadObjectsFromFile(const TimeStamp& time_stamp,const std::string& file_path, std::vector<ObjectInfo>& objects, bool is_lidar = false);  // 读取每一帧
     private:
         bool _is_initialized = false;
         std::vector<cv::String> _lidar_data_list;
@@ -30,7 +30,7 @@ namespace lidar_radar_fusion {
         std::map<TimeStamp, std::vector<ObjectInfo> > _lidar_data_time_sync;
         std::map<TimeStamp, std::vector<ObjectInfo> > _radar_data_time_sync;
 
-        std::shared_ptr<LidarRadarFusion> lidar_radar_fusion;;
+        std::shared_ptr<LidarRadarFusion> lidar_radar_fusion;  // 真正执行融合 src/lidar_radar_fusion/include/lidar_radar_fusion.hpp========================================================
 
     };
 }

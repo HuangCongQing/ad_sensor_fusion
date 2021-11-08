@@ -7,6 +7,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Ofast -Wfatal-errors -
 #     set(CMAKE_BUILD_TYPE release CACHE "Choose the type of build" FORCE)
 # endif()
 
+set(OpenCV_DIR "/media/hcq/hcq4T/多传感器融合资料/07多相机间的同步实战/opencv/3rdparty/share/OpenCV")
+
 # OpenCV
 set(OpenCV_DIR "/home/kavin/3rdparty/share/OpenCV")
 find_package(OpenCV REQUIRED)

@@ -21,6 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   tf
 )
+set(OpenCV_DIR "/media/hcq/hcq4T/多传感器融合资料/07多相机间的同步实战/opencv/3rdparty/share/OpenCV")
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)

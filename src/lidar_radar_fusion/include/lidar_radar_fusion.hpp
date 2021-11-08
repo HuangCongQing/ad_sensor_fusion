@@ -1,3 +1,12 @@
+/*
+ * @Description: 各函数声明
+ * @Author: HCQ
+ * @Company(School): UCAS
+ * @Email: 1756260160@qq.com
+ * @Date: 2021-11-06 21:17:24
+ * @LastEditTime: 2021-11-08 11:47:38
+ * @FilePath: /ad_sensor_fusion/src/lidar_radar_fusion/include/lidar_radar_fusion.hpp
+ */
 #ifndef __LIDAR_RADAR_FUSION_HPP__
 #define __LIDAR_RADAR_FUSION_HPP__
 #include "utils.hpp"
@@ -10,8 +19,8 @@ namespace lidar_radar_fusion {
         LidarRadarFusion();
         ~LidarRadarFusion();
 
-        bool Init(const std::map<TimeStamp, std::vector<ObjectInfo> >& lidar_objects,
-                  const std::map<TimeStamp, std::vector<ObjectInfo> >& radar_objects);
+        bool Init(const std::map<TimeStamp, std::vector<ObjectInfo> >& lidar_objects,  // lidar有高度信息，radar没有高度信息，激光雷达的z信息设置为0
+                  const std::map<TimeStamp, std::vector<ObjectInfo> >& radar_objects); // 初始化是对齐后的时间戳
         bool Run();
         std::vector<TrackObject> GetTrackedObjectPoints();
         std::vector<ObjectInfo> GetFilteredObjectPoints();
